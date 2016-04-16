@@ -1,0 +1,92 @@
+#!/bin/bash
+
+# Detect composer binary
+if which composer >/dev/null; then
+    composer='composer'
+elif which composer.phar >/dev/null; then
+    composer='composer.phar'
+else
+    # Install composer
+    curl -s http://getcomposer.org/installer | php >/dev/null
+    composer='php composer.phar'
+fi
+
+DEPLOYDIR=/home/gynbus/api;
+
+deploy() {
+
+    GIT_WORK_TREE=$DEPLOYDIR git checkout -f
+
+    echo "Entrando no Diretorio: $DEPLOYDIR";
+
+    cd "$DEPLOYDIR";
+
+    if [[ -d app/ ]]; then
+        rm -rf app/
+    fi
+
+    if [[ -d hotsite/ ]]; then
+        rm -rf hotsite/
+    fi
+
+    if [[ -d site/ ]]; then
+        rm -rf site/
+    fi
+
+    if [[ -d www/ ]]; then
+        rm -rf www/
+    fi
+
+    if [[ -d Android/ ]]; then
+        rm -rf Android/
+    fi
+
+    if [[ -d iOS/ ]]; then
+        rm -rf iOS/
+    fi
+
+    if [[ -d WindowsPhone/ ]]; then
+        rm -rf WindowsPhone/
+    fi
+
+    if [ -f readme.md ]; then
+        rm -rf readme.md
+    fi
+
+    if [ -f contributors.txt ]; then
+        rm -rf contributors.txt
+    fi
+
+if [[ -d Web/ ]]; then
+    cp -rf Web/* ./ && rm -rf Web/
+fi
+
+    if [ -f composer.json ]; then
+
+        # Run composer if composer.json is updated
+        echo "Updating Composer packages";
+        [ ! -f composer.lock ] && $composer install || $composer update
+
+        if [[ -d storage ]]; then
+            echo "Update Laravel Storage Permissions"
+            cd storage
+            find . -type d -exec chmod 777 {} \; && find . -type f -exec chmod 666 {} \;
+        fi
+
+    else
+        echo "Composer file not found. Noting to do... ";
+    fi
+
+    cd -
+}
+
+if [ -n "$1" -a -n "$2" -a -n "$3" ]; then
+    echo "Run by Arguments";
+    deploy $1 $2 $3
+else
+    while read oldrev newrev refname
+    do
+        deploy $oldrev $newrev $refname
+    done
+fi
+
